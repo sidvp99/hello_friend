@@ -1,4 +1,4 @@
-# A scroll for Shreya 🍥
+# A scroll for Friend S 🍥
 
 A small Naruto-themed Streamlit app. Five sections, one honest question at the
 end. Every picture in it is made of text — there are no image files in this
