@@ -4,7 +4,6 @@ A friendship scroll for Shreya.
 Run it with:  streamlit run app.py
 """
 
-import html
 import random
 import time
 from datetime import date
@@ -13,7 +12,7 @@ import streamlit as st
 
 import ascii_art as A
 import content as C
-from styles import art, inject_css
+from styles import art, caption, inject_css, rule, scroll_panel
 
 st.set_page_config(
     page_title="A scroll for Shreya",
@@ -47,63 +46,40 @@ def typewriter(text, key, speed=0.012):
     """Write text out one character at a time — but only the first time."""
     box = st.empty()
     if st.session_state.get(f"typed_{key}"):
-        box.markdown(
-            f'<div class="scroll"><div class="brush">{html.escape(text)}</div></div>',
-            unsafe_allow_html=True,
-        )
+        scroll_panel(text, container=box)
         return
     shown = ""
     for ch in text:
         shown += ch
-        box.markdown(
-            f'<div class="scroll"><div class="brush">{html.escape(shown)}▌</div></div>',
-            unsafe_allow_html=True,
-        )
+        scroll_panel(shown, cursor="|", container=box)
         time.sleep(speed)
-    box.markdown(
-        f'<div class="scroll"><div class="brush">{html.escape(text)}</div></div>',
-        unsafe_allow_html=True,
-    )
+    scroll_panel(text, container=box)
     st.session_state[f"typed_{key}"] = True
-
-
-def rule():
-    st.markdown('<hr class="rule">', unsafe_allow_html=True)
 
 
 def line_of_the_day():
     # Stable for the whole day so it doesn't flicker on every rerun.
-    rng = random.Random(date.today().toordinal())
-    return rng.choice(C.NINJA_WAY)
+    return random.Random(date.today().toordinal()).choice(C.NINJA_WAY)
 
 
 def word_card(kanji, romaji, meaning):
     st.markdown(
         f'<div class="kanji-big">{kanji}</div>'
-        f'<div class="romaji">{romaji}</div>'
-        f"<p>{meaning}</p>",
+        f'<div class="romaji">{romaji}</div>',
         unsafe_allow_html=True,
     )
+    st.write(meaning)
 
 
 # -------------------------------------------------------------------- pages
 def page_home():
     art(A.LOGO, "art-logo")
-    st.markdown(
-        '<p class="caption" style="text-align:center">'
-        "Every picture here is built out of text. Nothing is an image file."
-        "</p>",
-        unsafe_allow_html=True,
-    )
+    caption("Every picture here is built out of text. There is not one image file in this app.")
 
-    swirl = A.uzumaki_swirl(width=96, height=44)
-    art(swirl, "art-swirl")
-    st.markdown(
-        '<p class="caption" style="text-align:center">'
-        "The Uzumaki spiral, drawn by walking a curve and laying down the words "
-        "NARUTO · KONOHA · RASENGAN · RAMEN · KIZUNA along the path."
-        "</p>",
-        unsafe_allow_html=True,
+    art(A.uzumaki_swirl(width=90, height=40), "art-swirl")
+    caption(
+        "The Uzumaki spiral, drawn by walking a curve and laying the words "
+        "NARUTO . KONOHA . RASENGAN . RAMEN . KIZUNA along the path."
     )
 
     rule()
@@ -122,10 +98,7 @@ def page_home():
         st.markdown(f"**Ninja way for today.** {line_of_the_day()}")
     with right:
         art(A.SHREYA, "art-blue")
-        st.markdown(
-            '<p class="caption" style="text-align:center">シュレヤ · Shureya</p>',
-            unsafe_allow_html=True,
-        )
+        caption("シュレヤ &middot; Shureya")
 
 
 def page_scroll():
@@ -143,17 +116,10 @@ def page_scroll():
             "language is a slow, stubborn thing to do — people only do it when "
             "something really caught them."
         )
-        st.write(
-            "So the rest of this is me being curious out loud, and then asking "
-            "properly."
-        )
+        st.write("So the rest of this is me being curious out loud, and then asking properly.")
     with right:
         art(A.RAMEN, "art-plain")
-        st.markdown(
-            '<p class="caption" style="text-align:center">'
-            "Ichiraku rules: one bowl, no agenda.</p>",
-            unsafe_allow_html=True,
-        )
+        caption("Ichiraku rules: one bowl, no agenda.")
 
 
 def page_japanese():
@@ -187,7 +153,8 @@ def page_japanese():
             a, b = st.columns([1, 2])
             with a:
                 st.markdown(
-                    f'<div style="font-family:Shippori Mincho,serif;font-size:1.9rem">{kana}</div>'
+                    '<div style="font-family:Shippori Mincho,serif;font-size:1.9rem">'
+                    f"{kana}</div>"
                     f'<div class="romaji">{roma}</div>',
                     unsafe_allow_html=True,
                 )
@@ -211,8 +178,9 @@ def page_japanese():
                         f'<div class="kanji-big" style="font-size:2.6rem">{kana}</div>',
                         unsafe_allow_html=True,
                     )
-                    guesses.append(st.text_input(kana, key=f"kana_{kana}",
-                                                 label_visibility="collapsed"))
+                    guesses.append(
+                        st.text_input(kana, key=f"kana_{kana}", label_visibility="collapsed")
+                    )
             checked = st.form_submit_button("Check my answers")
         if checked:
             right = sum(
@@ -221,10 +189,7 @@ def page_japanese():
             )
             st.session_state.kana_score = right
             st.success(f"{right} of {len(C.KANA_QUIZ)}.")
-            st.write(
-                "Answers: "
-                + " · ".join(f"{k} = {v}" for k, v in C.KANA_QUIZ)
-            )
+            st.write("Answers: " + " · ".join(f"{k} = {v}" for k, v in C.KANA_QUIZ))
 
     rule()
     st.markdown("### The question I actually wanted to ask")
@@ -258,43 +223,39 @@ def page_exam():
             )
         submitted = st.form_submit_button("Submit answers")
 
-    if submitted:
-        score = sum(
-            1 for pick, item in zip(picks, C.QUIZ)
-            if pick == item["options"][item["answer"]]
-        )
-        st.session_state.quiz_score = score
-        rank, blurb = C.RANKS[0][1], C.RANKS[0][2]
-        for threshold, name, note in C.RANKS:
-            if score >= threshold:
-                rank, blurb = name, note
+    if not submitted:
+        return
 
-        rule()
-        a, b = st.columns([1, 2])
-        with a:
-            st.metric("Score", f"{score} / {len(C.QUIZ)}")
-            st.metric("Rank", rank)
-        with b:
-            st.write(blurb)
-            for pick, item in zip(picks, C.QUIZ):
-                correct = item["options"][item["answer"]]
-                mark = "○" if pick == correct else "×"
-                st.markdown(
-                    f"{mark} **{correct}** — {item['note']}"
-                )
-        if score == len(C.QUIZ):
-            st.balloons()
-        art(A.HEADBAND, "art-plain")
+    score = sum(
+        1 for pick, item in zip(picks, C.QUIZ)
+        if pick == item["options"][item["answer"]]
+    )
+    st.session_state.quiz_score = score
+    rank, blurb = C.RANKS[0][1], C.RANKS[0][2]
+    for threshold, name, note in C.RANKS:
+        if score >= threshold:
+            rank, blurb = name, note
+
+    rule()
+    a, b = st.columns([1, 2])
+    with a:
+        st.metric("Score", f"{score} / {len(C.QUIZ)}")
+        st.metric("Rank", rank)
+    with b:
+        st.write(blurb)
+        for pick, item in zip(picks, C.QUIZ):
+            correct = item["options"][item["answer"]]
+            mark = "○" if pick == correct else "×"
+            st.markdown(f"{mark} **{correct}** — {item['note']}")
+    if score == len(C.QUIZ):
+        st.balloons()
+    art(A.HEADBAND, "art-plain")
 
 
 def page_bond():
     st.markdown("## 絆 · the bond")
-    art(A.FACE, "art-plain")
-    st.markdown(
-        '<p class="caption" style="text-align:center">'
-        "Drawn in text, badly, with real affection.</p>",
-        unsafe_allow_html=True,
-    )
+    art(A.FACE, "art-face")
+    caption("Drawn in text, badly, with real affection.")
     rule()
 
     st.markdown("### First, the part I asked about")
@@ -355,19 +316,23 @@ def page_bond():
         )
         return
 
-    interests = st.session_state.interests + (
-        [st.session_state.note_back.strip()] if st.session_state.note_back.strip() else []
-    )
+    interests = list(st.session_state.interests)
+    if st.session_state.note_back.strip():
+        interests.append(st.session_state.note_back.strip())
+
     scroll = "\n".join(
         [
-            "FRIENDSHIP SCROLL — KONOHAGAKURE",
+            "FRIENDSHIP SCROLL - KONOHAGAKURE",
             "",
             f"Issued: {date.today().isoformat()}",
             f"Answer: {answer}",
             "Interests on record: " + (", ".join(interests) if interests else "to be discovered"),
             "What sparked the Japanese: "
-            + (", ".join(st.session_state.spark) if st.session_state.spark else "still to be told properly"),
-            f"Chunin exam: {st.session_state.quiz_score if st.session_state.quiz_score is not None else 'not attempted'}",
+            + (", ".join(st.session_state.spark) if st.session_state.spark
+               else "still to be told properly"),
+            "Chunin exam: "
+            + (str(st.session_state.quiz_score) if st.session_state.quiz_score is not None
+               else "not attempted"),
             "",
             "Terms: talk when you feel like it, ignore me when you don't,",
             "one bowl of ramen owed indefinitely.",
@@ -393,8 +358,7 @@ PAGES = {
 # ------------------------------------------------------------------ sidebar
 with st.sidebar:
     st.markdown(
-        '<div style="font-family:Shippori Mincho,serif;font-size:1.5rem">'
-        "木ノ葉隠れ</div>"
+        '<div style="font-family:Shippori Mincho,serif;font-size:1.5rem">木ノ葉隠れ</div>'
         '<div class="romaji">Konohagakure — hidden in the leaves</div>',
         unsafe_allow_html=True,
     )
@@ -415,8 +379,8 @@ PAGES[page]()
 
 st.markdown('<hr class="rule">', unsafe_allow_html=True)
 st.markdown(
-    '<p class="caption">Made with Streamlit, a spiral of text, and reasonable '
-    "hope. Naruto belongs to Masashi Kishimoto and Shueisha; this is a personal "
-    "fan project, not affiliated with them.</p>",
+    '<p class="caption">Made with Streamlit, a spiral of text, and reasonable hope. '
+    "Naruto belongs to Masashi Kishimoto and Shueisha; this is a personal fan "
+    "project, not affiliated with them.</p>",
     unsafe_allow_html=True,
 )
